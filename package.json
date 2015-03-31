@@ -30,7 +30,9 @@
     "method-override": "^2.1.2",
     "morgan": "^1.2.2",
     "socket.io": "^1.0.6",
-    "underscore": "^1.6.0"
+    "underscore": "^1.6.0",
+    "castv2-client": "0.0.8",
+    "mdns": "2.2.8"
   },
   "devDependencies": {
     "coffee-script": "^1.7.1",

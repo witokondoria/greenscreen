@@ -23,10 +23,11 @@ routes = require "./routes/routes"
 socketIO = require "socket.io"
 
 app = express()
+app.use cors()
 server = http.createServer app
 sockets = socketIO(server)
 
-app.use morgan('dev')
+#app.use morgan('dev')
 app.use bodyParser.urlencoded
   extended: true
 app.use bodyParser.json()
@@ -39,3 +40,64 @@ routes(app)
 port = process.env.PORT || config.server?.port || 4994
 server.listen port
 console.log "GScreen is listening to localhost:#{port}"
+ip = require "ip"
+
+bootTV = (host) ->
+  client = clients[host].client
+  client.connect clients[host].addr, ->
+    client.heartbeat.on 'timeout', ->
+      console.log 'TO %s', host
+      return
+    console.log '%s connected, loading initial screen ...', clients[host].addr
+    client.launch DefaultMediaReceiver, (err, player) ->
+      player.load {
+        contentId: 'http://' + ip.address() + ':4994/boot.jpg'
+        contentType: 'image/jpeg'
+        streamType: 'BUFFERING'
+      }, {
+        autoplay: true
+        autostop: true
+      }, (err, status) ->
+        console.log '%s did load boot media', host
+        setTimeout (->
+          console.log 'Will load GScreen on %s', host
+          client.receiver.send
+            type: 'LAUNCH'
+            appId: 'AE17EB79'
+            requestId: 1
+          return
+        ), 2000
+        return
+      return
+    return
+  client.on 'error', (err) ->
+    console.log 'Error: %s, %s', err.message, host
+    if client != undefined
+      client.close()
+    clients[host].client = new Client
+    client.connect host, ->
+      console.log '%s connected, launching app ...', host
+      client.heartbeat.on 'timeout', ->
+        console.log 'TO %s', host
+        return
+      return
+    return
+  return
+
+Client = require('castv2-client').Client
+DefaultMediaReceiver = require('castv2-client').DefaultMediaReceiver
+mdns = require('mdns')
+browser = mdns.createBrowser(mdns.tcp('googlecast'))
+bootGS = false
+clients = {}
+console.log 'Started first mdns query'
+browser.on 'serviceUp', (service) ->
+  host = service.addresses[0]
+  console.log 'found device "%s" at %s:%d', service.name, host, service.port
+  clients[host] = {}
+  clients[host].addr = service.addresses[0]
+  clients[host].client = new Client
+  bootTV host
+  browser.stop()
+  return
+browser.start()
