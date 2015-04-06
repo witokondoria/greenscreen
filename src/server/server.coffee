@@ -48,39 +48,18 @@ bootTV = (host) ->
     client.heartbeat.on 'timeout', ->
       console.log 'TO %s', host
       return
-    console.log '%s connected, loading initial screen ...', clients[host].addr
-    client.launch DefaultMediaReceiver, (err, player) ->
-      player.load {
-        contentId: 'http://' + ip.address() + ':4994/boot.jpg'
-        contentType: 'image/jpeg'
-        streamType: 'BUFFERING'
-      }, {
-        autoplay: true
-        autostop: true
-      }, (err, status) ->
-        console.log '%s did load boot media', host
-        setTimeout (->
-          console.log 'Will load GScreen on %s', host
-          client.receiver.send
-            type: 'LAUNCH'
-            appId: 'AE17EB79'
-            requestId: 1
-          return
-        ), 2000
-        return
-      return
+    console.log '%s connected, loading Gscreen', clients[host].addr
+    client.receiver.send
+      type: 'LAUNCH'
+      appId: 'AE17EB79'
+      requestId: 1
     return
   client.on 'error', (err) ->
     console.log 'Error: %s, %s', err.message, host
     if client != undefined
       client.close()
     clients[host].client = new Client
-    client.connect host, ->
-      console.log '%s connected, launching app ...', host
-      client.heartbeat.on 'timeout', ->
-        console.log 'TO %s', host
-        return
-      return
+    bootTV host
     return
   return
 
